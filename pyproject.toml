@@ -13,3 +13,4 @@ find = { where = ["python"] }
 target = "bvsolver._lib"
 path = "Cargo.toml"
 binding = "PyO3"
+debug = false
