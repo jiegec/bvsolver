@@ -55,6 +55,21 @@ def test_multi_solutions():
         assert b.get(solution) == 0
         assert c.get(solution) == 1
 
+    zeros: list[BitVector] = []
+    # a ^ 1 == 0
+    zeros.append(a ^ 1)
+    # a ^ b ^ 1 == 0
+    zeros.append(a ^ b ^ 1)
+    # c ^ d == 0
+    zeros.append(c ^ d)
+    # We can solve: [a, b, c, d] == [1, 0, 0, 0] or [1, 0, 1, 1]
+    solutions = list(solver.solve(zeros))
+    assert len(solutions) == 2
+    for solution in solutions:
+        assert a.get(solution) == 1
+        assert b.get(solution) == 0
+        assert c.get(solution) == d.get(solution)
+
     # no constraints
     solutions = list(solver.solve([]))
     assert len(solutions) == 16

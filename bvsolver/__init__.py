@@ -97,56 +97,80 @@ class Solver:
             equations += zero._bits
 
         # gauss elimination
-        missing = []
+        free = []  # free variables
+        done = 0
         for i in range(1, self._size + 1):
             # find one entry with the bit set
-            found = False
-            for j in range(len(equations)):
+            for j in range(done, len(equations)):
                 if equations[j] & (1 << i) != 0:
                     # found
                     # eliminate others
-                    for k in range(j + 1, len(equations)):
-                        if equations[k] & (1 << i) != 0:
+                    for k in range(0, len(equations)):
+                        if j != k and equations[k] & (1 << i) != 0:
                             equations[k] ^= equations[j]
 
-                    found = True
+                    # swap equations[j] and equations[done]
+                    equations[j], equations[done] = equations[done], equations[j]
+                    done += 1
+
                     break
-            if not found:
-                missing.append(i)
-
-        # recover solution from equations
-        res = 0
+        # now in reduced row echelon form
+        # find more free variables
+        # some free variables do not appear in any equation
+        appearing = 0
         for e in equations:
+            if e == 1:
+                # no solution
+                return None
+            # ignore the constant term
+            if e & 1 == 1:
+                e ^= 1
+            appearing |= e
             count = e.bit_count()
-            if count == 2:
-                # the bit is one, one of them is the bit 0
-                assert e & 1 == 1
-                res |= e ^ 1
-            elif count == 1:
-                if e == 1:
-                    # no solution
-                    return None
-                # otherwise, the bit is zero, do nothing
-                pass
-            elif count == 0:
-                # all zero, do nothing
-                pass
-            else:
-                assert False
+            if count >= 2:
+                # correlated free variables
+                # add all except the last one
+                e &= e - 1
+                while e != 0:
+                    free.append(e & -e)
+                    e &= e - 1
 
+        if appearing.bit_count() != self._size:
+            # count not appearing
+            for i in range(1, self._size + 1):
+                if appearing & (1 << i) == 0:
+                    free.append(1 << i)
+
+        # now all free variables are found
+        print(equations, done, free)
+        assert done + len(free) == self._size
+
+        # we got 2 ** len(free) solutions
         # recover all solutions
-        num_sols = 1 << len(missing)
+        num_sols = 1 << len(free)
         sols = 0
-        base_res = res
         while sols < num_sols:
-            yield res
-
-            # next solution
-            sols += 1
-            res = base_res
-            for i in range(len(missing)):
+            # compute solution
+            # assign free variables
+            res = 0
+            for i in range(len(free)):
                 if sols & (1 << i) != 0:
-                    res |= 1 << missing[i]
+                    res |= free[i]
+
+            # solve other variables given the known free variables
+            # recover solution from equations
+            res = 0
+            for e in equations:
+                # find low bit in e
+                e_drop_1 = e ^ 1 if e & 1 == 1 else e
+                lowbit = e_drop_1 & (-e_drop_1)
+                # e.g. e=0b101, and res=0b000, then lowbit=0b100 must be set
+                # e.g. e=0b11101, and res=0b01000, then lowbit=0b100 must not be set
+                if (e_drop_1 & res).bit_count() & 1 != e & 1:
+                    # the low bit must be set to make equation equal
+                    res |= lowbit
+            yield res
+            sols += 1
         return None
 
 
