@@ -140,14 +140,15 @@ class Solver:
                 free.append(i)
 
         # convert to row reduced echelon form and compute solution if all free variables are zero
-        base_res = 0
+        base_res = 1 # constant term
         for i in range(self._size):
             for j in range(i + 1, self._size):
                 if mapping[i] & (1 << (j + 1)) != 0:
                     # eliminate
                     mapping[i] ^= mapping[j]
-            # after elminiation, compute solution if free variables are zero
-            base_res += (mapping[i] & 1) << (i + 1)
+        for i in range(self._size):
+            # after elimination, compute solution if free variables are zero
+            base_res |= (mapping[i] & 1) << (i + 1)
 
         # now all free variables are found
         assert done + len(free) == self._size
@@ -226,10 +227,10 @@ class CPythonRandom(Generic[T]):
     _index: int
     _state: list[T]  # 624 32-bit numbers
 
-    def __init__(self, state: list[T]) -> None:
+    def __init__(self, state: list[T], index: int) -> None:
         assert len(state) == N
-        self._state = state
-        self._index = 0  # the initial index does not matter
+        self._state = state.copy()
+        self._index = index
 
     def genrand_uint32(self) -> T:
         # see genrand_uint32 from _randommodule.c
@@ -252,10 +253,19 @@ class CPythonRandom(Generic[T]):
         return y
 
     def getrandbits(self, bits) -> T:
-        assert bits == 32
-        return self.genrand_uint32()
+        # _random_Random_getrandbits_impl in _randommodule.c
+        if bits <= 32:
+            return self.genrand_uint32() >> (32 - bits)
+        else:
+            assert False
 
     def to_cpython_random(self) -> random.Random:
         res = random.Random(0)
         res.setstate((3, (*self._state, self._index), None))
+        return res
+
+    @classmethod
+    def from_cpython_random(cls, rng: random.Random) -> CPythonRandom:
+        state = rng.getstate()
+        res = CPythonRandom(list(state[1][:-1]), state[1][-1])
         return res
