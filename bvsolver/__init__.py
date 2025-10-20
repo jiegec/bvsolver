@@ -95,9 +95,6 @@ class Solver:
             if not found:
                 missing.append(i)
 
-        # TODO: handle multiple solutions
-        assert missing == []
-
         # recover solution from equations
         res = 0
         for e in equations:
@@ -107,10 +104,25 @@ class Solver:
                 assert e & 1 == 1
                 res |= e ^ 1
             elif count == 1:
-                # the bit is zero
+                if e == 1:
+                    # no solution
+                    return None
+                # otherwise, the bit is zero, do nothing
                 pass
             else:
                 assert False
 
-        yield res
+        # recover all solutions
+        num_sols = 1 << len(missing)
+        sols = 0
+        base_res = res
+        while sols < num_sols:
+            yield res
+
+            # next solution
+            sols += 1
+            res = base_res
+            for i in range(len(missing)):
+                if sols & (1 << i) != 0:
+                    res |= 1 << missing[i]
         return None
