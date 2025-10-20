@@ -52,6 +52,7 @@ def test_multi_solutions() -> None:
     assert len(solutions) == 2
     last = None
     for solution in solutions:
+        print(solution)
         assert a.get(solution) == 1
         assert b.get(solution) == 0
         assert c.get(solution) == 1

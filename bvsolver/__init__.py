@@ -100,61 +100,61 @@ class Solver:
 
     def solve(self, zeros: list[BitVector]) -> Generator[int]:
         # flatten
-        equations: list[int] = []
+        flatten: list[int] = []
         for zero in zeros:
-            equations += zero._bits
+            flatten += zero._bits
 
         # gauss elimination
-        free = []  # free variables
         done = 0
-        print(len(equations))
-        for i in range(len(equations)):
-            e = equations[i]
+        # for each bit, record its row with the bit set to 1
+        mapping = [0] * self._size
+        for i in range(len(flatten)):
+            e = flatten[i]
             if e == 1:
                 # no solution
                 return None
-            # drop the constant bit and see if there are some variables
-            if e & 1 == 1:
-                e = e ^ 1
-            if e != 0:
-                # eliminate others regarding the lowbit
-                lowbit = e & (-e)
-                for k in range(0, len(equations)):
-                    if i != k and equations[k] & lowbit != 0:
-                        equations[k] ^= equations[i]
+            # elminate with existing rows in reduced row echelon form
+            added = False
+            for bit in range(self._size):
+                if e & (1 << (bit + 1)) != 0:
+                    if mapping[bit] != 0:
+                        e ^= mapping[bit]
+                    else:
+                        mapping[bit] = e
+                        done += 1
+                        added = True
+                        break
+            if not added and e != 0:
+                # eliminate to non-zero, no solutions
+                return None
 
-                # move to done
-                equations[i], equations[done] = equations[done], equations[i]
-                done += 1
+        # find free variables
+        free = []
+        for i in range(self._size):
+            if mapping[i] == 0:
+                free.append(i)
 
-        # now in reduced row echelon form, drop the rest
-        equations = equations[:done]
-
-        # find more free variables
-        # some free variables do not appear in any equation
-        appearing = 0
-        for e in equations:
-            # ignore the constant term
-            if e & 1 == 1:
-                e ^= 1
-            appearing |= e
-            count = e.bit_count()
-            if count >= 2:
-                # correlated free variables
-                # add all except the last one
-                e &= e - 1
-                while e != 0:
-                    free.append(e & -e)
-                    e &= e - 1
-
-        if appearing.bit_count() != self._size:
-            # count not appearing
-            for i in range(1, self._size + 1):
-                if appearing & (1 << i) == 0:
-                    free.append(1 << i)
+        # convert to row reduced echelon form and compute solution if all free variables are zero
+        base_res = 0
+        for i in range(self._size):
+            for j in range(i + 1, self._size):
+                if mapping[i] & (1 << (j + 1)) != 0:
+                    # eliminate
+                    mapping[i] ^= mapping[j]
+            # after elminiation, compute solution if free variables are zero
+            base_res += (mapping[i] & 1) << (i + 1)
 
         # now all free variables are found
         assert done + len(free) == self._size
+
+        # compute contribution of each free variable to solution
+        contribution = []
+        for bit in free:
+            c = 0
+            for i in range(self._size):
+                if (mapping[i] & (1 << (bit + 1))) != 0 or i == bit:
+                    c |= 1 << (i + 1)
+            contribution.append(c)
 
         # we got 2 ** len(free) solutions
         # recover all solutions
@@ -163,22 +163,11 @@ class Solver:
         while sols < num_sols:
             # compute solution
             # assign free variables
-            res = 0
+            res = base_res
             for i in range(len(free)):
                 if sols & (1 << i) != 0:
-                    res |= free[i]
+                    res ^= contribution[i]
 
-            # solve other variables given the known free variables
-            # recover solution from equations
-            for e in equations:
-                # find low bit in e
-                e_drop_1 = e ^ 1 if e & 1 == 1 else e
-                lowbit = e_drop_1 & (-e_drop_1)
-                # e.g. e=0b101, and res=0b000, then lowbit=0b100 must be set
-                # e.g. e=0b11101, and res=0b01000, then lowbit=0b100 must not be set
-                if (e_drop_1 & res).bit_count() & 1 != e & 1:
-                    # the low bit must be set to make equation equal
-                    res |= lowbit
             yield res
             sols += 1
         return None
