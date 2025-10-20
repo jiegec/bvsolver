@@ -113,3 +113,23 @@ def test_lfsr() -> None:
     assert len(solutions) == 1
     state_recover = state.get(solutions[0])
     assert state_recover == initial_state
+
+
+def test_random() -> None:
+    initial_state = [secrets.randbits(32) for i in range(N)]
+    rand = CPythonRandom(initial_state)
+    known = [rand.getrandbits(32) for i in range(1000)]
+
+    # solve
+    solver = Solver([32] * N)
+    state = solver.bitvectors()
+    rand_recover = CPythonRandom(state)
+    computed: list[BitVector] = [
+        rand_recover.getrandbits(32) for i in range(len(known))
+    ]
+    solutions = list(
+        solver.solve([actual ^ expected for expected, actual in zip(known, computed)])
+    )
+    assert len(solutions) == 1
+    state_recover = [s.get(solutions[0]) for s in state]
+    assert state_recover == initial_state

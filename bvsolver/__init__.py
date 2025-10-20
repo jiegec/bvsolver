@@ -49,8 +49,16 @@ class BitVector:
     def __and__(self, other: int) -> BitVector:
         res: list[int] = []
         assert other.bit_length() <= len(self._bits)
-        for i, b in enumerate(self._bits):
-            res.append(b if other & (1 << i) != 0 else 0)
+        for i in range(other.bit_length()):
+            res.append(self._bits[i] if other & (1 << i) != 0 else 0)
+        return BitVector(res)
+
+    def __mul__(self, other: int) -> BitVector:
+        # only one bit is supported
+        assert len(self._bits) == 1
+        res: list[int] = []
+        for i in range(other.bit_length()):
+            res.append(self._bits[0] if other & (1 << i) != 0 else 0)
         return BitVector(res)
 
     def __rshift__(self, other: int) -> BitVector:
@@ -207,3 +215,46 @@ class FibonacciLFSR(Generic[T]):
             xor_reduce(self._state & self._poly) << (self._width - 1)
         )
         return res
+
+
+# some constants from _randommodule.c
+N = 624
+M = 397
+MATRIX_A = 0x9908B0DF
+UPPER_MASK = 0x80000000
+LOWER_MASK = 0x7FFFFFFF
+
+
+class CPythonRandom(Generic[T]):
+    _index: int
+    _state: list[T]  # 624 32-bit numbers
+
+    def __init__(self, state: list[T]) -> None:
+        assert len(state) == N
+        self._state = state
+        self._index = 0  # the initial index does not matter
+
+    def genrand_uint32(self) -> T:
+        # see genrand_uint32 from _randommodule.c
+        if self._index >= N:
+            for kk in range(N):
+                y = (self._state[kk] & UPPER_MASK) ^ (
+                    self._state[(kk + 1) % N] & LOWER_MASK
+                )
+                # mag01[y & 0x1U]: if y & 0x1U == 0, then 0; else MATRIX_A
+                mag01 = (y & 1) * MATRIX_A
+                self._state[kk] = self._state[(kk + M) % N] ^ (y >> 1) ^ mag01
+            self._index = 0
+
+        y = self._state[self._index]
+        self._index += 1
+        y = y ^ (y >> 11)
+        y = y ^ (y << 7) & 0x9D2C5680
+        y = y ^ (y << 15) & 0xEFC60000
+        y = y ^ (y << 18)
+        return y
+
+    def getrandbits(self, bits) -> T:
+        # TODO
+        assert bits == 32
+        return self.genrand_uint32()
