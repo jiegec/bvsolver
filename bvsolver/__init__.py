@@ -1,6 +1,7 @@
 from __future__ import annotations
 from collections.abc import Generator
 import functools
+from typing import overload
 
 # Solve equations on bit vectors,
 # e.g. 4 bits, a to d, and we know that:
@@ -20,6 +21,7 @@ import functools
 
 
 class BitVector:
+    # from LSB to MSB
     _bits: list[int]
 
     def __init__(self, bits: list[int]) -> None:
@@ -32,14 +34,31 @@ class BitVector:
     def __xor__(self, other: BitVector | int) -> BitVector:
         res: list[int] = []
         if isinstance(other, BitVector):
-            assert len(self._bits) == len(other._bits)
-            for l, r in zip(self._bits, other._bits):
-                res.append(l ^ r)
+            new_len = max(len(self._bits), len(other._bits))
+            res = [0] * new_len
+            for i, b in enumerate(self._bits):
+                res[i] ^= b
+            for i, b in enumerate(other._bits):
+                res[i] ^= b
         else:
             assert other.bit_length() <= len(self._bits)
             for i, b in enumerate(self._bits):
                 res.append(b ^ (1 if other & (1 << i) != 0 else 0))
         return BitVector(res)
+
+    def __and__(self, other: int) -> BitVector:
+        res: list[int] = []
+        assert other.bit_length() <= len(self._bits)
+        for i, b in enumerate(self._bits):
+            res.append(b if other & (1 << i) != 0 else 0)
+        return BitVector(res)
+
+    def __rshift__(self, other: int) -> BitVector:
+        assert 0 <= other <= len(self._bits)
+        return BitVector(self._bits[other:])
+
+    def __lshift__(self, other: int) -> BitVector:
+        return BitVector([0] * other + self._bits)
 
     def get(self, solution: int) -> int:
         res = 0
@@ -109,6 +128,9 @@ class Solver:
                     return None
                 # otherwise, the bit is zero, do nothing
                 pass
+            elif count == 0:
+                # all zero, do nothing
+                pass
             else:
                 assert False
 
@@ -126,3 +148,36 @@ class Solver:
                 if sols & (1 << i) != 0:
                     res |= 1 << missing[i]
         return None
+
+
+@overload
+def xor_reduce(bv: BitVector) -> BitVector: ...
+@overload
+def xor_reduce(bv: int) -> int: ...
+def xor_reduce(bv):
+    if isinstance(bv, BitVector):
+        res = 0
+        for bit in bv._bits:
+            res ^= bit
+        return BitVector([res])
+    else:
+        return bv.bit_count() & 1
+
+
+class FibonacciLFSR[T: BitVector | int]:
+    _width: int
+    _poly: int
+    _state: T
+
+    def __init__(self, width: int, poly: int, state: T) -> None:
+        self._width = width
+        self._poly = poly
+        self._state = state
+
+    def gen(self) -> T:
+        res = self._state & 1
+        # shift
+        self._state = (self._state >> 1) ^ (
+            xor_reduce(self._state & self._poly) << (self._width - 1)
+        )
+        return res

@@ -1,11 +1,12 @@
-import bvsolver
+import secrets
+from bvsolver import *
 
 
 def test_simple():
-    solver = bvsolver.Solver([1] * 4)
+    solver = Solver([1] * 4)
     a, b, c, d = solver.bitvectors()
 
-    zeros: list[bvsolver.BitVector] = []
+    zeros: list[BitVector] = []
     # a ^ 1 == 0
     zeros.append(a ^ 1)
     # a ^ b ^ 1 == 0
@@ -25,7 +26,7 @@ def test_simple():
 
 
 def test_multibit():
-    solver = bvsolver.Solver([8])
+    solver = Solver([8])
     (a,) = solver.bitvectors()
 
     # a ^ 0x34 == 0
@@ -36,10 +37,10 @@ def test_multibit():
 
 
 def test_multi_solutions():
-    solver = bvsolver.Solver([1] * 4)
+    solver = Solver([1] * 4)
     a, b, c, d = solver.bitvectors()
 
-    zeros: list[bvsolver.BitVector] = []
+    zeros: list[BitVector] = []
     # a ^ 1 == 0
     zeros.append(a ^ 1)
     # a ^ b ^ 1 == 0
@@ -62,13 +63,32 @@ def test_multi_solutions():
 
 
 def test_no_solutions():
-    solver = bvsolver.Solver([1] * 2)
+    solver = Solver([1] * 2)
     a, b = solver.bitvectors()
 
-    zeros: list[bvsolver.BitVector] = []
+    zeros: list[BitVector] = []
     # a ^ 1 == 0
     zeros.append(a ^ 1)
     # a == 0
     zeros.append(a)
     solutions = list(solver.solve(zeros))
     assert len(solutions) == 0
+
+
+def test_lfsr():
+    width = 32
+    initial_state = secrets.randbits(width)
+    lfsr = FibonacciLFSR(width, secrets.randbits(width), initial_state)
+    known = [lfsr.gen() for i in range(1024)]
+
+    # solve
+    solver = Solver([lfsr._width])
+    (state,) = solver.bitvectors()
+    lfsr_recover = FibonacciLFSR(lfsr._width, lfsr._poly, state)
+    computed: list[BitVector] = [lfsr_recover.gen() for i in range(len(known))]
+    solutions = list(
+        solver.solve([actual ^ expected for expected, actual in zip(known, computed)])
+    )
+    assert len(solutions) == 1
+    state_recover = state.get(solutions[0])
+    assert state_recover == initial_state
