@@ -115,15 +115,19 @@ class Solver:
                 return None
             # elminate with existing rows in reduced row echelon form
             added = False
-            for bit in range(self._size):
-                if e & (1 << (bit + 1)) != 0:
-                    if mapping[bit] != 0:
-                        e ^= mapping[bit]
-                    else:
-                        mapping[bit] = e
-                        done += 1
-                        added = True
-                        break
+            e_no_low = e ^ (e & 1)
+            while e_no_low != 0:
+                lowbit = e_no_low & (-e_no_low)
+                # minus 2: 0b10 -> mapping index 0
+                bit = lowbit.bit_length() - 2
+                if mapping[bit] != 0:
+                    e ^= mapping[bit]
+                    e_no_low = e ^ (e & 1)
+                else:
+                    mapping[bit] = e
+                    done += 1
+                    added = True
+                    break
             if not added and e != 0:
                 # eliminate to non-zero, no solutions
                 return None
