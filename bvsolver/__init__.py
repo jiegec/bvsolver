@@ -107,29 +107,33 @@ class Solver:
         # gauss elimination
         free = []  # free variables
         done = 0
-        for i in range(1, self._size + 1):
-            # find one entry with the bit set
-            for j in range(done, len(equations)):
-                if equations[j] & (1 << i) != 0:
-                    # found
-                    # eliminate others
-                    for k in range(0, len(equations)):
-                        if j != k and equations[k] & (1 << i) != 0:
-                            equations[k] ^= equations[j]
+        print(len(equations))
+        for i in range(len(equations)):
+            e = equations[i]
+            if e == 1:
+                # no solution
+                return None
+            # drop the constant bit and see if there are some variables
+            if e & 1 == 1:
+                e = e ^ 1
+            if e != 0:
+                # eliminate others regarding the lowbit
+                lowbit = e & (-e)
+                for k in range(0, len(equations)):
+                    if i != k and equations[k] & lowbit != 0:
+                        equations[k] ^= equations[i]
 
-                    # swap equations[j] and equations[done]
-                    equations[j], equations[done] = equations[done], equations[j]
-                    done += 1
+                # move to done
+                equations[i], equations[done] = equations[done], equations[i]
+                done += 1
 
-                    break
-        # now in reduced row echelon form
+        # now in reduced row echelon form, drop the rest
+        equations = equations[:done]
+
         # find more free variables
         # some free variables do not appear in any equation
         appearing = 0
         for e in equations:
-            if e == 1:
-                # no solution
-                return None
             # ignore the constant term
             if e & 1 == 1:
                 e ^= 1
@@ -150,7 +154,6 @@ class Solver:
                     free.append(1 << i)
 
         # now all free variables are found
-        print(equations, done, free)
         assert done + len(free) == self._size
 
         # we got 2 ** len(free) solutions
@@ -251,10 +254,10 @@ class CPythonRandom(Generic[T]):
         y = y ^ (y >> 11)
         y = y ^ (y << 7) & 0x9D2C5680
         y = y ^ (y << 15) & 0xEFC60000
-        y = y ^ (y << 18)
+        y = y ^ (y << 18) & 0xFFFFFFFF
         return y
 
     def getrandbits(self, bits) -> T:
-        # TODO
+        # TODO: bits != 32
         assert bits == 32
         return self.genrand_uint32()
