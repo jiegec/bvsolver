@@ -117,9 +117,8 @@ def test_lfsr() -> None:
 
 
 def test_random() -> None:
-    initial_state = [secrets.randbits(32) for i in range(N)]
-    rand = CPythonRandom(initial_state)
-    known = [rand.getrandbits(32) for i in range(1000)]
+    all = [random.getrandbits(32) for i in range(1000)]
+    known = all[:624]
 
     # solve
     solver = Solver([32] * N)
@@ -133,4 +132,5 @@ def test_random() -> None:
     )
     assert len(solutions) == 1
     state_recover = [s.get(solutions[0]) for s in state]
-    assert state_recover == initial_state
+    rng = CPythonRandom(state_recover).to_cpython_random()
+    assert [rng.getrandbits(32) for i in range(1000)] == all

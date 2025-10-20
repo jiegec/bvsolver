@@ -1,6 +1,7 @@
 from __future__ import annotations
 from collections.abc import Generator
 import functools
+import random
 from typing import Generic, TypeVar, overload
 
 # Solve equations on bit vectors,
@@ -247,10 +248,14 @@ class CPythonRandom(Generic[T]):
         y = y ^ (y >> 11)
         y = y ^ (y << 7) & 0x9D2C5680
         y = y ^ (y << 15) & 0xEFC60000
-        y = y ^ (y << 18) & 0xFFFFFFFF
+        y = y ^ (y >> 18)
         return y
 
     def getrandbits(self, bits) -> T:
-        # TODO: bits != 32
         assert bits == 32
         return self.genrand_uint32()
+
+    def to_cpython_random(self) -> random.Random:
+        res = random.Random(0)
+        res.setstate((3, (*self._state, self._index), None))
+        return res
