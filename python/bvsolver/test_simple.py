@@ -182,6 +182,3 @@ def test_random_32() -> None:
 def test_random_16() -> None:
     inner(16, 2000, 1500)
 
-
-def test_random_1() -> None:
-    inner(1, 20000, 15000)

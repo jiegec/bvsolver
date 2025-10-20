@@ -1,6 +1,5 @@
 from __future__ import annotations
 from collections.abc import Generator
-import functools
 import random
 from typing import Generic, TypeVar, overload
 
@@ -140,7 +139,7 @@ class Solver:
                 free.append(i)
 
         # convert to row reduced echelon form and compute solution if all free variables are zero
-        base_res = 1 # constant term
+        base_res = 1  # constant term
         for i in range(self._size):
             for j in range(i + 1, self._size):
                 if mapping[i] & (1 << (j + 1)) != 0:
