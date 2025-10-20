@@ -169,8 +169,8 @@ def inner(bits, all_count, known_count) -> None:
     state_recover = [s.get(solutions[0]) for s in state]
     assert known == [actual.get(solutions[0]) for actual in computed]
     assert list(init_state[1][:-1]) == state_recover
-    rng = CPythonRandom(state_recover, 624)
-    assert [rng.getrandbits(bits) for i in range(all_count)] == all
+    test_rng = CPythonRandom(state_recover, 624)
+    assert [test_rng.getrandbits(bits) for i in range(all_count)] == all
     rng = CPythonRandom(state_recover, 624).to_cpython_random()
     assert [rng.getrandbits(bits) for i in range(all_count)] == all
 

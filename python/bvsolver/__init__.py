@@ -2,6 +2,7 @@ from __future__ import annotations
 from collections.abc import Generator
 import random
 from typing import Generic, TypeVar, overload
+import bvsolver._lib
 
 # Solve equations on bit vectors,
 # e.g. 4 bits, a to d, and we know that:
@@ -98,78 +99,84 @@ class Solver:
     def bitvectors(self) -> list[BitVector]:
         return self._bitvectors
 
-    def solve(self, zeros: list[BitVector]) -> Generator[int]:
+    def solve(self, zeros: list[BitVector], use_python=False) -> Generator[int]:
         # flatten
         flatten: list[int] = []
         for zero in zeros:
             flatten += zero._bits
 
-        # gauss elimination
-        done = 0
-        # for each bit, record its row with the bit set to 1
-        mapping = [0] * self._size
-        for i in range(len(flatten)):
-            e = flatten[i]
-            if e == 1:
+        if use_python:
+            # gauss elimination
+            done = 0
+            # for each bit, record its row with the bit set to 1
+            mapping = [0] * self._size
+            for i in range(len(flatten)):
+                e = flatten[i]
+                if e == 1:
+                    # no solution
+                    return None
+                # elminate with existing rows in reduced row echelon form
+                added = False
+                e_no_low = e ^ (e & 1)
+                while e_no_low != 0:
+                    lowbit = e_no_low & (-e_no_low)
+                    # minus 2: 0b10 -> mapping index 0
+                    bit = lowbit.bit_length() - 2
+                    if mapping[bit] != 0:
+                        e ^= mapping[bit]
+                        e_no_low = e ^ (e & 1)
+                    else:
+                        mapping[bit] = e
+                        done += 1
+                        added = True
+                        break
+                if not added and e != 0:
+                    # eliminate to non-zero, no solutions
+                    return None
+
+            # find free variables
+            free = []
+            for i in range(self._size):
+                if mapping[i] == 0:
+                    free.append(i)
+
+            # convert to row reduced echelon form and compute solution if all free variables are zero
+            base_res = 1  # constant term
+            for i in range(self._size):
+                for j in range(i + 1, self._size):
+                    if mapping[i] & (1 << (j + 1)) != 0:
+                        # eliminate
+                        mapping[i] ^= mapping[j]
+            for i in range(self._size):
+                # after elimination, compute solution if free variables are zero
+                base_res |= (mapping[i] & 1) << (i + 1)
+
+            # now all free variables are found
+            assert done + len(free) == self._size
+
+            # compute contribution of each free variable to solution
+            contribution = []
+            for bit in free:
+                c = 0
+                for i in range(self._size):
+                    if (mapping[i] & (1 << (bit + 1))) != 0 or i == bit:
+                        c |= 1 << (i + 1)
+                contribution.append(c)
+        else:
+            base_res, contribution = bvsolver._lib.solve(self._size, flatten)
+            if base_res == -1:
                 # no solution
                 return None
-            # elminate with existing rows in reduced row echelon form
-            added = False
-            e_no_low = e ^ (e & 1)
-            while e_no_low != 0:
-                lowbit = e_no_low & (-e_no_low)
-                # minus 2: 0b10 -> mapping index 0
-                bit = lowbit.bit_length() - 2
-                if mapping[bit] != 0:
-                    e ^= mapping[bit]
-                    e_no_low = e ^ (e & 1)
-                else:
-                    mapping[bit] = e
-                    done += 1
-                    added = True
-                    break
-            if not added and e != 0:
-                # eliminate to non-zero, no solutions
-                return None
 
-        # find free variables
-        free = []
-        for i in range(self._size):
-            if mapping[i] == 0:
-                free.append(i)
-
-        # convert to row reduced echelon form and compute solution if all free variables are zero
-        base_res = 1  # constant term
-        for i in range(self._size):
-            for j in range(i + 1, self._size):
-                if mapping[i] & (1 << (j + 1)) != 0:
-                    # eliminate
-                    mapping[i] ^= mapping[j]
-        for i in range(self._size):
-            # after elimination, compute solution if free variables are zero
-            base_res |= (mapping[i] & 1) << (i + 1)
-
-        # now all free variables are found
-        assert done + len(free) == self._size
-
-        # compute contribution of each free variable to solution
-        contribution = []
-        for bit in free:
-            c = 0
-            for i in range(self._size):
-                if (mapping[i] & (1 << (bit + 1))) != 0 or i == bit:
-                    c |= 1 << (i + 1)
-            contribution.append(c)
-
-        # we got 2 ** len(free) solutions
+        # we got 2 ** len(contribution) solutions
         # recover all solutions
-        num_sols = 1 << len(free)
+        num_sols = 1 << len(contribution)
         sols = 0
         while sols < num_sols:
             # compute solution
             # assign free variables
             res = base_res
-            for i in range(len(free)):
+            for i in range(len(contribution)):
                 if sols & (1 << i) != 0:
                     res ^= contribution[i]
 
