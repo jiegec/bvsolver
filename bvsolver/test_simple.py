@@ -2,7 +2,7 @@ import secrets
 from bvsolver import *
 
 
-def test_simple():
+def test_simple() -> None:
     solver = Solver([1] * 4)
     a, b, c, d = solver.bitvectors()
 
@@ -25,7 +25,7 @@ def test_simple():
         assert d.get(solution) == 0
 
 
-def test_multibit():
+def test_multibit() -> None:
     solver = Solver([8])
     (a,) = solver.bitvectors()
 
@@ -36,7 +36,7 @@ def test_multibit():
         assert a.get(solution) == 0x34
 
 
-def test_multi_solutions():
+def test_multi_solutions() -> None:
     solver = Solver([1] * 4)
     a, b, c, d = solver.bitvectors()
 
@@ -60,7 +60,7 @@ def test_multi_solutions():
         else:
             assert d.get(solution) == 1 - last
 
-    zeros: list[BitVector] = []
+    zeros = []
     # a ^ 1 == 0
     zeros.append(a ^ 1)
     # a ^ b ^ 1 == 0
@@ -83,7 +83,7 @@ def test_multi_solutions():
         print(solution)
 
 
-def test_no_solutions():
+def test_no_solutions() -> None:
     solver = Solver([1] * 2)
     a, b = solver.bitvectors()
 
@@ -96,7 +96,7 @@ def test_no_solutions():
     assert len(solutions) == 0
 
 
-def test_lfsr():
+def test_lfsr() -> None:
     width = 32
     initial_state = secrets.randbits(width)
     lfsr = FibonacciLFSR(width, secrets.randbits(width), initial_state)

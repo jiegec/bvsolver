@@ -1,7 +1,7 @@
 from __future__ import annotations
 from collections.abc import Generator
 import functools
-from typing import overload
+from typing import Generic, TypeVar, overload
 
 # Solve equations on bit vectors,
 # e.g. 4 bits, a to d, and we know that:
@@ -187,7 +187,10 @@ def xor_reduce(bv):
         return bv.bit_count() & 1
 
 
-class FibonacciLFSR[T: BitVector | int]:
+T = TypeVar("T", BitVector, int)
+
+
+class FibonacciLFSR(Generic[T]):
     _width: int
     _poly: int
     _state: T
