@@ -159,7 +159,6 @@ class Solver:
 
             # solve other variables given the known free variables
             # recover solution from equations
-            res = 0
             for e in equations:
                 # find low bit in e
                 e_drop_1 = e ^ 1 if e & 1 == 1 else e
