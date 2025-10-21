@@ -1,6 +1,6 @@
 import secrets
 import random
-from bvsolver import Solver, BitVector, CPythonRandom, FibonacciLFSR
+from bvsolver import Solver, BitVector, CPythonRandom, FibonacciLFSR, Xoshiro256ss
 
 
 def test_simple() -> None:
@@ -197,3 +197,8 @@ def test_seed() -> None:
     rng = random.Random()
     seed = CPythonRandom.recover_seed(rng)
     assert rng.getstate() == random.Random(seed).getstate()
+
+
+def test_xoshiro256ss_roundtrip() -> None:
+    i = 1
+    assert Xoshiro256ss.backward(Xoshiro256ss.forward(i)) == i

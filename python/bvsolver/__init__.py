@@ -297,7 +297,7 @@ class MersenneTwister(Generic[T]):
         y = y ^ (y >> self._l)
         return y
 
-    def seed(self, seed: int) -> None:
+    def seed(self: MersenneTwister[int], seed: int) -> None:
         # see seed(result_type __sd) in random.tcc, init_genrand in _randomodule.c
         mask = (1 << self._w) - 1
         self._state[0] = seed & mask
@@ -466,3 +466,50 @@ class CPythonRandom(MT19937[T]):
             seed = (seed << 32) | key
 
         return seed
+
+
+# https://en.wikipedia.org/wiki/Xorshift#xoshiro256++
+# xorshiro256**
+class Xoshiro256ss(Generic[T]):
+    _state: list[T]
+
+    def __init__(self, state: list[T]) -> None:
+        assert len(state) == 4
+        self._state = state
+
+    def gen(self) -> T:
+        result = self._state[1]
+        mask = (1 << 64) - 1
+        t = (self._state[1] << 17) & mask
+
+        self._state[2] = self._state[2] ^ self._state[0]
+        self._state[3] = self._state[3] ^ self._state[1]
+        self._state[1] = self._state[1] ^ self._state[2]
+        self._state[0] = self._state[0] ^ self._state[3]
+
+        self._state[2] = self._state[2] ^ t
+        self._state[3] = ((self._state[3] << 45) & mask) ^ (self._state[3] >> (64 - 45))
+
+        # the result need to be called `forward()` to get the real random number
+        return result
+
+    # this part cannot be described in bit arithmetic, but reversible
+    @classmethod
+    def forward(cls, value: int) -> int:
+        """compute rol64(s[1] * 5, 7) * 9 from s[1]"""
+        mask = (1 << 64) - 1
+        value = (value * 5) & mask
+        value = ((value << 7) & mask) | (value >> (64 - 7))
+        value = (value * 9) & mask
+        return value
+
+    @classmethod
+    def backward(cls, value: int) -> int:
+        """compute s[1] from rol64(s[1] * 5, 7) * 9"""
+        mask = (1 << 64) - 1
+        inv9 = pow(9, -1, 1 << 64)
+        value = (value * inv9) & mask
+        value = ((value << (64 - 7)) & mask) | (value >> 7)
+        inv5 = pow(5, -1, 1 << 64)
+        value = (value * inv5) & mask
+        return value
