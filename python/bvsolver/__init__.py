@@ -260,10 +260,24 @@ class CPythonRandom(Generic[T]):
 
     def getrandbits(self, bits) -> T:
         # _random_Random_getrandbits_impl in _randommodule.c
-        if bits <= 32:
-            return self.genrand_uint32() >> (32 - bits)
+        if isinstance(self._state[0], BitVector):
+            res = BitVector([0])
         else:
-            assert False
+            res = 0
+
+        if bits == 0:
+            return res
+        elif bits <= 32:
+            return self.genrand_uint32() >> (32 - bits)
+
+        words = (bits - 1) // 32 + 1
+        for i in range(words):
+            r = self.genrand_uint32()
+            if bits < 32:
+                r = r >> (32 - bits)
+            res = res ^ (r << (32 * i))
+            bits -= 32
+        return res
 
     def to_cpython_random(self) -> random.Random:
         res = random.Random(0)

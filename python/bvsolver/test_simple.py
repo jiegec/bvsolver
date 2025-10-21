@@ -175,6 +175,14 @@ def inner(bits, all_count, known_count) -> None:
     assert [rng.getrandbits(bits) for i in range(all_count)] == all
 
 
+def test_random_1024() -> None:
+    inner(1024, 1000, 25)
+
+
+def test_random_256() -> None:
+    inner(256, 1000, 80)
+
+
 def test_random_32() -> None:
     inner(32, 1000, 624)
 
