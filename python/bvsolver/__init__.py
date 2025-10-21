@@ -275,8 +275,9 @@ class MersenneTwister(Generic[T]):
     def gen(self) -> T:
         # see genrand_uint32 from _randommodule.c or operator()() from random.tcc
         if self._index >= self._n:
-            upper_mask = 1 << (self._w - 1)
-            lower_mask = upper_mask - 1
+            mask = (1 << self._w) - 1
+            upper_mask = (mask << self._r) & mask
+            lower_mask = mask ^ upper_mask
             for kk in range(self._n):
                 y = (self._state[kk] & upper_mask) ^ (
                     self._state[(kk + 1) % self._n] & lower_mask
