@@ -1,5 +1,7 @@
-from pwn import *
+from pwn import process
 import bvsolver
+import os
+import tempfile
 
 code = """
 #include <random>

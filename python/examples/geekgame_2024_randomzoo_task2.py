@@ -1,5 +1,6 @@
 from pwn import *
 import bvsolver
+import tempfile
 
 # https://github.com/PKU-GeekGame/geekgame-4th/tree/master/official_writeup/algo-randomzoo
 code = """

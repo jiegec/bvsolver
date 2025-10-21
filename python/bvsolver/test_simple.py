@@ -1,6 +1,6 @@
 import secrets
 import random
-from bvsolver import Solver, BitVector, CPythonRandom, FibonacciLFSR, N
+from bvsolver import Solver, BitVector, CPythonRandom, FibonacciLFSR
 
 
 def test_simple() -> None:
@@ -148,6 +148,7 @@ def inner(bits, all_count, known_count) -> None:
     known = all[:known_count]
 
     # solve
+    N = 624
     solver = Solver([32] * N)
     state = solver.bitvectors()
     rand_recover = CPythonRandom(
@@ -190,6 +191,7 @@ def test_random_32() -> None:
 
 def test_random_16() -> None:
     inner(16, 2000, 1500)
+
 
 def test_seed() -> None:
     rng = random.Random()

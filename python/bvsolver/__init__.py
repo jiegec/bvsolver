@@ -49,8 +49,7 @@ class BitVector:
 
     def __and__(self, other: int) -> BitVector:
         res: list[int] = []
-        assert other.bit_length() <= len(self._bits)
-        for i in range(other.bit_length()):
+        for i in range(min(len(self._bits), other.bit_length())):
             res.append(self._bits[i] if other & (1 << i) != 0 else 0)
         return BitVector(res)
 
@@ -221,42 +220,106 @@ class FibonacciLFSR(Generic[T]):
         return res
 
 
-# some constants from _randommodule.c
-N = 624
-M = 397
-MATRIX_A = 0x9908B0DF
-UPPER_MASK = 0x80000000
-LOWER_MASK = 0x7FFFFFFF
-
-
-class CPythonRandom(Generic[T]):
+class MersenneTwister(Generic[T]):
     _index: int
-    _state: list[T]  # 624 32-bit numbers
+    _state: list[T]
+    _w: int
+    _n: int
+    _m: int
+    _r: int
+    _a: int
+    _u: int
+    _d: int
+    _s: int
+    _b: int
+    _t: int
+    _c: int
+    _l: int
+    _f: int
 
-    def __init__(self, state: list[T], index: int = N) -> None:
-        assert len(state) == N
+    def __init__(
+        self,
+        state: list[T],
+        index: int,
+        w: int,
+        n: int,
+        m: int,
+        r: int,
+        a: int,
+        u: int,
+        d: int,
+        s: int,
+        b: int,
+        t: int,
+        c: int,
+        l: int,
+        f: int,
+    ) -> None:
+        assert len(state) == n
         self._state = state.copy()
         self._index = index
+        self._w = w
+        self._n = n
+        self._m = m
+        self._r = r
+        self._a = a
+        self._u = u
+        self._d = d
+        self._s = s
+        self._b = b
+        self._t = t
+        self._c = c
+        self._l = l
+        self._f = f
 
-    def genrand_uint32(self) -> T:
-        # see genrand_uint32 from _randommodule.c
-        if self._index >= N:
-            for kk in range(N):
-                y = (self._state[kk] & UPPER_MASK) ^ (
-                    self._state[(kk + 1) % N] & LOWER_MASK
+    def gen(self) -> T:
+        # see genrand_uint32 from _randommodule.c or operator()() from random.tcc
+        if self._index >= self._n:
+            upper_mask = 1 << (self._w - 1)
+            lower_mask = upper_mask - 1
+            for kk in range(self._n):
+                y = (self._state[kk] & upper_mask) ^ (
+                    self._state[(kk + 1) % self._n] & lower_mask
                 )
                 # mag01[y & 0x1U]: if y & 0x1U == 0, then 0; else MATRIX_A
-                mag01 = (y & 1) * MATRIX_A
-                self._state[kk] = self._state[(kk + M) % N] ^ (y >> 1) ^ mag01
+                mag01 = (y & 1) * self._a
+                self._state[kk] = (
+                    self._state[(kk + self._m) % self._n] ^ (y >> 1) ^ mag01
+                )
             self._index = 0
 
         y = self._state[self._index]
         self._index += 1
-        y = y ^ (y >> 11)
-        y = y ^ (y << 7) & 0x9D2C5680
-        y = y ^ (y << 15) & 0xEFC60000
-        y = y ^ (y >> 18)
+        y = y ^ (y >> self._u) & self._d
+        y = y ^ (y << self._s) & self._b
+        y = y ^ (y << self._t) & self._c
+        y = y ^ (y >> self._l)
         return y
+
+
+class CPythonRandom(MersenneTwister[T]):
+    def __init__(self, state: list[T], index: int = 624) -> None:
+        MersenneTwister.__init__(
+            self,
+            state,
+            index,
+            32,
+            624,
+            397,
+            31,
+            0x9908B0DF,
+            11,
+            0xFFFFFFFF,
+            7,
+            0x9D2C5680,
+            15,
+            0xEFC60000,
+            18,
+            1812433253,
+        )
+
+    def genrand_uint32(self) -> T:
+        return self.gen()
 
     def getrandbits(self, bits) -> T:
         # _random_Random_getrandbits_impl in _randommodule.c
@@ -293,7 +356,8 @@ class CPythonRandom(Generic[T]):
     @classmethod
     def recover_seed(cls, rng: random.Random) -> int:
         state = rng.getstate()
-        assert state[1][-1] == 624
+        N = 624
+        assert state[1][-1] == N
 
         # learned from https://github.com/PKU-GeekGame/geekgame-3rd/blob/279868d814fd8371075e06cf705730c54a3e2a13/official_writeup/prob08-cookie/README.md
         # and https://github.com/jailctf/challenges-2024/blob/master/stupid-crypto-chall/solve/solve.py

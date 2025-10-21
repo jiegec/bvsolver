@@ -1,5 +1,6 @@
-from pwn import *
+from pwn import process
 import bvsolver
+import tempfile
 
 # https://github.com/PKU-GeekGame/geekgame-3rd/blob/279868d814fd8371075e06cf705730c54a3e2a13/official_writeup/prob08-cookie/attachment/prob08-server.py
 code = """
@@ -56,10 +57,10 @@ with tempfile.NamedTemporaryFile("w", suffix=".py") as f:
         rng_recover = bvsolver.CPythonRandom(state_recover, 624).to_cpython_random()
         words = bytearray()
         for i in range(len(d) // 4):
-            gen = rng_recover.getrandbits(32)
+            gen_recover = rng_recover.getrandbits(32)
             # little endian
-            words.append((gen & 0xFF) ^ d[i * 4 + 0])
-            words.append(((gen >> 8) & 0xFF) ^ d[i * 4 + 1])
-            words.append(((gen >> 16) & 0xFF) ^ d[i * 4 + 2])
-            words.append(((gen >> 24) & 0xFF) ^ d[i * 4 + 3])
+            words.append((gen_recover & 0xFF) ^ d[i * 4 + 0])
+            words.append(((gen_recover >> 8) & 0xFF) ^ d[i * 4 + 1])
+            words.append(((gen_recover >> 16) & 0xFF) ^ d[i * 4 + 2])
+            words.append(((gen_recover >> 24) & 0xFF) ^ d[i * 4 + 3])
         print(words[2500:])
