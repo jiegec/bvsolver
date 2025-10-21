@@ -1,6 +1,7 @@
 import bvsolver
 from random import random, seed
 from ast import literal_eval
+import sys
 
 # https://github.com/jailctf/challenges-2024/tree/master/stupid-crypto-chall
 
@@ -58,6 +59,7 @@ for sol in solver.solve(zeros):
     rng_seed = bvsolver.CPythonRandom.recover_seed(
         bvsolver.CPythonRandom(state_recover, 624).to_cpython_random()
     )
+    # TODO: find a shorter seed that achieve the same effect
     seed(rng_seed)
     total_prog = "".join(
         [
