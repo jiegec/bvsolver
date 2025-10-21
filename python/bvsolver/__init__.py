@@ -289,3 +289,70 @@ class CPythonRandom(Generic[T]):
         state = rng.getstate()
         res = CPythonRandom(list(state[1][:-1]), state[1][-1])
         return res
+
+    @classmethod
+    def recover_seed(cls, rng: random.Random) -> int:
+        state = rng.getstate()
+        assert state[1][-1] == 624
+
+        # learned from https://github.com/PKU-GeekGame/geekgame-3rd/blob/279868d814fd8371075e06cf705730c54a3e2a13/official_writeup/prob08-cookie/README.md
+        # and https://github.com/jailctf/challenges-2024/blob/master/stupid-crypto-chall/solve/solve.py
+        # see init_by_array in _randommodule.c
+        mt = list(state[1][:-1])
+        assert mt[0] == 0x80000000
+        # assume key_length == N
+
+        # compute init_genrand(self, 19650218U)
+        ma = [19650218]
+        for i in range(1, N):
+            # mt[mti] =
+            #   (1812433253U * (mt[mti-1] ^ (mt[mti-1] >> 30)) + mti);
+            ma.append((1812433253 * (ma[i - 1] ^ (ma[i - 1] >> 30)) + i) & 0xFFFFFFFF)
+
+        # for the second loop, reverse the process
+        i = 2
+        mt[0] = mt[N - 1]
+        for k in range(1, N):
+            # if (i>=N) { mt[0] = mt[N-1]; i=1; }
+            if i == 1:
+                i = N
+            # i++;
+            # mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 30)) * 1566083941U))
+            #      - (uint32_t)i; /* non linear */
+            i -= 1
+            mt[i] += i
+            mt[i] ^= (mt[i - 1] ^ (mt[i - 1] >> 30)) * 1566083941
+            mt[i] &= 0xFFFFFFFF
+
+        # for the first loop, reverse the process
+        init_key = []
+        i = 2
+        j = N
+        mt[0] = mt[N - 1]
+        for k in range(N):
+            # if (i>=N) { mt[0] = mt[N-1]; i=1; }
+            if i == 1:
+                i = N
+            # i++; j++;
+            j -= 1
+            i -= 1
+            # mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 30)) * 1664525U))
+            #      + init_key[j] + (uint32_t)j; /* non linear */
+            m = mt[i] - j
+            # what is mt[i] before this assignment?
+            t = mt[i] if k == 0 else ma[i]
+            m -= t ^ ((mt[i - 1] ^ (mt[i - 1] >> 30)) * 1664525)
+            if i == 1:
+                # handle mt[0] = mt[N-1];
+                # recover mt[0] to its initial value
+                mt[0] = ma[0]
+            # got key
+            init_key.append(m & 0xFFFFFFFF)
+
+        # see random_seed in _randommodule.c
+        # 32 bit chunks from the right
+        seed = 0
+        for key in init_key:
+            seed = (seed << 32) | key
+
+        return seed

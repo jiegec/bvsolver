@@ -190,3 +190,8 @@ def test_random_32() -> None:
 
 def test_random_16() -> None:
     inner(16, 2000, 1500)
+
+def test_seed() -> None:
+    rng = random.Random()
+    seed = CPythonRandom.recover_seed(rng)
+    assert rng.getstate() == random.Random(seed).getstate()
