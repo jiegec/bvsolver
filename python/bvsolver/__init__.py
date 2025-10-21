@@ -475,7 +475,7 @@ class Xoshiro256ss(Generic[T]):
 
     def __init__(self, state: list[T]) -> None:
         assert len(state) == 4
-        self._state = state
+        self._state = state.copy()
 
     def gen(self) -> T:
         result = self._state[1]
