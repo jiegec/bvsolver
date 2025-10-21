@@ -20,6 +20,7 @@ rng = bvsolver.CPythonRandom(
 # see init_by_array in _randommodule.c
 zeros = [state[0] ^ 0x80000000]
 for value in known:
+    # see _random_Random_random_impl in _randommodule.c
     s = int(value * 9007199254740992.0)
     a = s // 67108864
     b = s % 67108864

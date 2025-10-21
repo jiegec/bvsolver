@@ -24,7 +24,7 @@ with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
 
     p = process([f"{f.name}.bin"])
     all_nums = [int(p.recvline().decode().strip()) for i in range(10000)]
-    known = all_nums[:311]
+    known = all_nums[:312]
 
     # create equations
     solver = bvsolver.Solver([64] * 312)
@@ -50,3 +50,5 @@ with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
 
         # multiple solutions, choose one
         break
+
+    # FIXME: no solution found?
