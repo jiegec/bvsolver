@@ -8,7 +8,9 @@ code = """
 #include <iostream>
 int main() {
     std::random_device rd;
-    std::mt19937 gen(rd());
+    auto seed = rd();
+    std::cout << seed << std::endl;
+    std::mt19937 gen(seed);
     for (int i = 0;i < 10000;i++) {
         std::cout << gen() << std::endl;
     }
@@ -23,7 +25,15 @@ with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
     os.system(f"g++ -O2 {f.name} -o {f.name}.bin")
 
     p = process([f"{f.name}.bin"])
+    seed = int(p.recvline().decode().strip())
     all_nums = [int(p.recvline().decode().strip()) for i in range(10000)]
+    # verify our seeder
+    test_rng = bvsolver.MT19937([0] * 624, 624)
+    test_rng.seed(seed)
+    for i in range(10000):
+        gen = test_rng.gen()
+        assert all_nums[i] == gen
+
     known = all_nums[:624]
 
     # create equations

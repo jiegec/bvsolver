@@ -1,4 +1,4 @@
-from pwn import *
+from pwn import process
 import bvsolver
 import tempfile
 

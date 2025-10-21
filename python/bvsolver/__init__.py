@@ -296,6 +296,19 @@ class MersenneTwister(Generic[T]):
         y = y ^ (y >> self._l)
         return y
 
+    def seed(self, seed: int) -> None:
+        # see seed(result_type __sd) in random.tcc, init_genrand in _randomodule.c
+        mask = (1 << self._w) - 1
+        self._state[0] = seed & mask
+        for i in range(1, self._n):
+            # mt[mti] =
+            #   (1812433253U * (mt[mti-1] ^ (mt[mti-1] >> 30)) + mti);
+            self._state[i] = (
+                self._f * (self._state[i - 1] ^ (self._state[i - 1] >> (self._w - 2)))
+                + i
+            ) & mask
+        self._index = self._n
+
 
 class MT19937(MersenneTwister[T]):
     def __init__(self, state: list[T], index: int = 624) -> None:
