@@ -233,7 +233,7 @@ class CPythonRandom(Generic[T]):
     _index: int
     _state: list[T]  # 624 32-bit numbers
 
-    def __init__(self, state: list[T], index: int) -> None:
+    def __init__(self, state: list[T], index: int = N) -> None:
         assert len(state) == N
         self._state = state.copy()
         self._index = index
