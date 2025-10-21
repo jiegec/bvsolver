@@ -5,5 +5,5 @@ target
 build
 dist
 *.egg-info
-_lib.*
+_lib.cpython*
 perf.data*

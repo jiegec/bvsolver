@@ -297,7 +297,7 @@ class MersenneTwister(Generic[T]):
         return y
 
 
-class CPythonRandom(MersenneTwister[T]):
+class MT19937(MersenneTwister[T]):
     def __init__(self, state: list[T], index: int = 624) -> None:
         MersenneTwister.__init__(
             self,
@@ -318,7 +318,39 @@ class CPythonRandom(MersenneTwister[T]):
             1812433253,
         )
 
+
+class MT19937_64(MersenneTwister[T]):
+    def __init__(self, state: list[T], index: int = 312) -> None:
+        MersenneTwister.__init__(
+            self,
+            state,
+            index,
+            64,
+            312,
+            156,
+            31,
+            0xB5026F5AA96619E9,
+            29,
+            0x5555555555555555,
+            17,
+            0x71D67FFFEDA60000,
+            37,
+            0xFFF7EEE000000000,
+            43,
+            6364136223846793005,
+        )
+
+
+class CPythonRandom(MT19937[T]):
+    def __init__(self, state: list[T], index: int = 624) -> None:
+        MT19937.__init__(
+            self,
+            state,
+            index,
+        )
+
     def genrand_uint32(self) -> T:
+        # genrand_uint32 from _randommodule.c
         return self.gen()
 
     def getrandbits(self, bits) -> T:

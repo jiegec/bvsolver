@@ -1,0 +1,3 @@
+from typing import Tuple
+
+def solve(bits: int, zeros: list[int]) -> Tuple[int, list[int]]: ...
