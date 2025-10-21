@@ -1,5 +1,6 @@
 import secrets
-from bvsolver import *
+import random
+from bvsolver import Solver, BitVector, CPythonRandom, FibonacciLFSR, N
 
 
 def test_simple() -> None:
