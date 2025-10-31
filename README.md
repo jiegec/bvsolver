@@ -12,3 +12,13 @@ Supported operations (BitVector means a bitvector of unknown bits to solve):
 6. BitVector << int
 
 Heavily inspired by [gf2bv](https://github.com/maple3142/gf2bv).
+
+## Usage
+
+Install the Python package:
+
+```shell
+pip3 install git+ssh://git@github.com/jiegec/bvsolver.git
+```
+
+See [examples](./python/examples) for usage.
