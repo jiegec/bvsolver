@@ -50,7 +50,7 @@ with tempfile.NamedTemporaryFile("w", suffix=".py") as f:
             # recreate random number generator
             rng_recover = bvsolver.CPythonRandom(state_recover, 624).to_cpython_random()
             flag = ""
-            for i in range(50):
+            for i in range(33):
                 flag += chr(known[i] - rng_recover.getrandbits(32))
             print(flag)
 
