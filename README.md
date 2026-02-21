@@ -11,7 +11,7 @@ Supported operations (BitVector means a bitvector of unknown bits to solve):
 5. BitVector >> int
 6. BitVector << int
 
-Heavily inspired by [gf2bv](https://github.com/maple3142/gf2bv). Instead of using m4ri to solve equations, a Rust solver is implemented to accelerate solving.
+Heavily inspired by [gf2bv](https://github.com/maple3142/gf2bv). Instead of using m4ri to solve equations, a Rust solver is implemented to accelerate solving. However, the performance is still worse than m4ri, so gf2bv is preferred.
 
 ## Usage
 
